@@ -14,6 +14,7 @@ export const EmotionTracker = () => {
   const [detectedEmotion, setDetectedEmotion] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { updateEmotion } = useEmotion();
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -53,13 +54,27 @@ export const EmotionTracker = () => {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        setIsTracking(true);
-        detectEmotions();
+        
+        // Wait for video to be ready before starting detection
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().then(() => {
+            console.log('Video started, beginning emotion detection...');
+            setIsTracking(true);
+            startDetectionLoop();
+          }).catch((err) => {
+            console.error('Error playing video:', err);
+          });
+        };
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
@@ -72,53 +87,71 @@ export const EmotionTracker = () => {
   };
 
   const stopTracking = () => {
+    // Clear detection interval
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    }
+    
+    // Stop video stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    
+    // Clear video source
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
     setIsTracking(false);
+    setDetectedEmotion('');
   };
 
-  const detectEmotions = async () => {
-    if (!videoRef.current) return;
+  const startDetectionLoop = () => {
+    // Clear any existing interval
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+    }
 
-    const detect = async () => {
-      if (!isTracking || !videoRef.current) return;
-
-      const detections = await faceapi
-        .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-        .withFaceExpressions();
-
-      if (detections) {
-        const expressions = detections.expressions;
-        const emotion = Object.keys(expressions).reduce((a, b) =>
-          expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
-        );
-
-        setDetectedEmotion(emotion);
-        updateEmotion(emotion);
-
-        // Save to Firebase
-        if (currentUser) {
-          await addDoc(collection(db, 'emotions'), {
-            userId: currentUser.uid,
-            emotion,
-            timestamp: new Date().toISOString(),
-          });
-        }
+    // Start new detection loop
+    detectionIntervalRef.current = setInterval(async () => {
+      if (!videoRef.current || videoRef.current.readyState !== 4) {
+        console.log('Video not ready yet...');
+        return;
       }
 
-      setTimeout(detect, 1000); // Check every second
-    };
+      try {
+        const detections = await faceapi
+          .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+          .withFaceExpressions();
 
-    detect();
+        if (detections) {
+          const expressions = detections.expressions;
+          const emotion = Object.keys(expressions).reduce((a, b) =>
+            expressions[a as keyof typeof expressions] > expressions[b as keyof typeof expressions] ? a : b
+          );
+
+          console.log('Detected emotion:', emotion);
+          setDetectedEmotion(emotion);
+          updateEmotion(emotion);
+
+          // Save to Firebase (throttled to avoid too many writes)
+          if (currentUser && Math.random() < 0.1) { // Save ~10% of detections
+            await addDoc(collection(db, 'emotions'), {
+              userId: currentUser.uid,
+              emotion,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        } else {
+          console.log('No face detected');
+        }
+      } catch (error) {
+        console.error('Detection error:', error);
+      }
+    }, 1000); // Check every second
   };
-
-  useEffect(() => {
-    if (isTracking && videoRef.current) {
-      detectEmotions();
-    }
-  }, [isTracking]);
 
   return (
     <div className="glass-card p-6 rounded-2xl space-y-4">
