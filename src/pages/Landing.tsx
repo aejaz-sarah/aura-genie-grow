@@ -9,6 +9,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { app } from '@/config/firebase'; // adjust path if needed
+import GenieBackground from "@/components/ui/GenieBackground";
+
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -42,6 +44,12 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+
+  {/* ✅ Add this background behind everything */}
+  <GenieBackground />
+
+  {/* Existing navbar, particles, etc. stay as-is */}
+
       {/* Navbar */}
       <motion.nav
         initial={{ y: -100 }}
@@ -106,12 +114,13 @@ const Landing = () => {
 
         {/* Title */}
         <motion.div variants={fadeIn('up', 0.4)} className="space-y-4">
-          <h1 className="text-5xl md:text-7xl font-bold">
-            <span className="gradient-text">GENIE</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            Your Gamified AI Companion for Emotional Intelligence and Cognitive Growth
-          </p>
+          <h1 className="text-6xl md:text-8xl font-bold text-white uppercase drop-shadow-[0_0_20px_rgba(0,0,0,1)]">
+  Genie
+</h1>
+<p className="text-2xl md:text-3xl text-white drop-shadow-[0_0_20px_rgba(0,0,0,1)]">
+  Your Gamified AI Companion for Educational Intelligence and Cognitive Growth
+</p>
+
         </motion.div>
 
         {/* Features */}

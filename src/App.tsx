@@ -14,7 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import Feedback from "./pages/Feedback";
 import NotFound from "./pages/NotFound";
 import { EmotionTracker } from "@/components/EmotionTracker";
-import { AITutor } from "@/components/AITutor";
+import AITutor from "@/components/AITutor";
 import { motion } from "framer-motion";
 
 const queryClient = new QueryClient();
