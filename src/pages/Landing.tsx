@@ -7,6 +7,8 @@ import { fadeIn, staggerContainer } from '@/utils/motion';
 import { Sparkles, Brain, Target, LogIn } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { app } from '@/config/firebase'; // adjust path if needed
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -15,11 +17,11 @@ const Landing = () => {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [showNavbar, setShowNavbar] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowNavbar(window.scrollY > 100);
-    };
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
+  useEffect(() => {
+    const handleScroll = () => setShowNavbar(window.scrollY > 100);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -29,9 +31,18 @@ const Landing = () => {
     setShowAuthModal(true);
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+      navigate('/explore');
+    } catch (error) {
+      console.error('Google login failed:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Scroll-triggered navbar */}
+      {/* Navbar */}
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: showNavbar ? 0 : -100 }}
@@ -43,31 +54,27 @@ const Landing = () => {
             <Sparkles className="w-6 h-6 text-primary" />
             <span className="text-xl font-bold gradient-text">GENIE</span>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {currentUser ? (
-              <Button onClick={() => navigate('/explore')}>
-                Dashboard
-              </Button>
+              <Button onClick={() => navigate('/explore')}>Dashboard</Button>
             ) : (
               <>
                 <Button variant="ghost" onClick={() => openAuth('login')}>
                   <LogIn className="w-4 h-4 mr-2" />
                   Log In
                 </Button>
-                <Button onClick={() => openAuth('signup')}>
-                  Sign Up
-                </Button>
+                <Button onClick={() => openAuth('signup')}>Sign Up</Button>
               </>
             )}
           </div>
         </div>
       </motion.nav>
 
-      {/* Animated background gradient */}
+      {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/5 to-secondary/5" />
-      
-      {/* Floating particles */}
+
+      {/* Floating Particles */}
       {[...Array(20)].map((_, i) => (
         <motion.div
           key={i}
@@ -76,10 +83,7 @@ const Landing = () => {
             top: `${Math.random() * 100}%`,
             left: `${Math.random() * 100}%`,
           }}
-          animate={{
-            y: [0, -30, 0],
-            opacity: [0, 1, 0],
-          }}
+          animate={{ y: [0, -30, 0], opacity: [0, 1, 0] }}
           transition={{
             duration: 3 + Math.random() * 2,
             repeat: Infinity,
@@ -88,6 +92,7 @@ const Landing = () => {
         />
       ))}
 
+      {/* Main Content */}
       <motion.div
         variants={staggerContainer}
         initial="hidden"
@@ -130,46 +135,54 @@ const Landing = () => {
         </motion.div>
 
         {/* CTA Buttons */}
-        <motion.div variants={fadeIn('up', 0.8)} className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          {currentUser ? (
-            <Button
-              size="lg"
-              onClick={() => navigate('/explore')}
-              className="text-lg px-8 py-6 shadow-neon-blue hover:shadow-neon-pink transition-all"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Go to Dashboard
-            </Button>
-          ) : (
-            <>
-              <Button
-                size="lg"
-                onClick={() => openAuth('signup')}
-                className="text-lg px-8 py-6 shadow-neon-blue hover:shadow-neon-pink transition-all"
-              >
-                <Sparkles className="w-5 h-5 mr-2" />
-                Sign Up
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => openAuth('login')}
-                className="text-lg px-8 py-6"
-              >
-                <LogIn className="w-5 h-5 mr-2" />
-                Log In
-              </Button>
-            </>
-          )}
+        <motion.div
+          variants={fadeIn('up', 0.8)}
+          className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+        >
+          <>
+  <Button
+    size="lg"
+    onClick={() => openAuth('signup')}
+    className="text-lg px-8 py-6 shadow-neon-blue hover:shadow-neon-pink transition-all"
+  >
+    <Sparkles className="w-5 h-5 mr-2" />
+    Sign Up
+  </Button>
+
+  <Button
+    size="lg"
+    variant="outline"
+    onClick={() => openAuth('login')}
+    className="text-lg px-8 py-6"
+  >
+    <LogIn className="w-5 h-5 mr-2" />
+    Log In
+  </Button>
+
+  <Button
+    size="lg"
+    variant="secondary"
+    onClick={handleGoogleLogin}
+    className="text-lg px-8 py-6 bg-red-500 hover:bg-red-600 text-white"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 488 512"
+      className="w-5 h-5 mr-2"
+    >
+      <path
+        fill="currentColor"
+        d="M488 261.8c0-17.8-1.6-35.1-4.7-51.8H249v98.1h135c-5.8 31.4-23.5 57.9-50.1 75.8v62.7h81c47.4-43.7 74.1-108 74.1-184.8z"
+      />
+    </svg>
+    Continue with Google
+  </Button>
+</>
         </motion.div>
       </motion.div>
 
       {/* Auth Modal */}
-      <AuthModal
-        open={showAuthModal}
-        onOpenChange={setShowAuthModal}
-        defaultMode={authMode}
-      />
+      <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} defaultMode={authMode} />
     </div>
   );
 };
