@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import * as faceapi from 'face-api.js';
 import { Button } from '@/components/ui/button';
 import { Camera, CameraOff } from 'lucide-react';
-import { useEmotion } from '@/context/EmotionContext';
+import { useEmotion } from "@/store/useEmotion";
 import { useAuth } from '@/context/AuthContext';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
